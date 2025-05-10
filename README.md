@@ -39,8 +39,6 @@ This confusion matrix evaluates the performance of the model for **bounding box 
 
 This indicates that while the model can detect certain road features, the localization of these features is still not accurate enough for real-world applications.
 
-![Bounding Box Localization Confusion Matrix](path_to_bounding_box_confusion_matrix.png)
-
 ---
 
 ### **2. Classification Confusion Matrix**
