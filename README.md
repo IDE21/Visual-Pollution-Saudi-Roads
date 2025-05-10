@@ -50,8 +50,6 @@ The classification confusion matrix shows the results for classifying the road f
 * **Potholes** are classified correctly most of the time, but **sidewalks** and **barriers** suffer from significant misclassifications.
 * **Sidewalks** and **barriers** are often misclassified as **potholes**, reflecting a need for better feature separation and better training for these features.
 
-![Classification Confusion Matrix](path_to_classification_confusion_matrix.png)
-
 ---
 
 ### **3. Object Detection Results**
@@ -60,8 +58,6 @@ The detection results show how the model detects road features, represented by *
 
 * **True positives**: The model correctly identifies objects, especially potholes.
 * **False positives/negatives**: The model misidentifies or fails to identify sidewalk and barrier objects, indicating that more data or a different architecture may improve these detections.
-
-![Detection Results](path_to_detection_results.png)
 
 ---
 
