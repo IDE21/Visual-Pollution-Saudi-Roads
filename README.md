@@ -10,8 +10,9 @@ This model is intended for developers and researchers interested in real-time ob
 
 The dataset used in this project consists of labeled images of **barriers**, **sidewalks**, and **potholes**. These images are manually annotated to help the model classify and detect these road features efficiently. The dataset was utilized to train and evaluate the model’s performance in both classification and bounding box localization tasks.
 
-You can access the dataset here:
-[Download Dataset]([https://data.mendeley.com/datasets/bb7b8vtwry/1])
+You can access and download the dataset used in this project via the following link:
+
+👉 [Download Dataset](https://data.mendeley.com/datasets/bb7b8vtwry/1)
 
 The dataset contains a variety of road images with different lighting, angles, and conditions, which provides a challenge for the model to generalize well.
 
