@@ -19,6 +19,8 @@ The data is the **Saudi Arabia Public Roads Visual Pollution Dataset** by AlElai
 
 - Download: https://data.mendeley.com/datasets/bb7b8vtwry/1
 - Classes used here: `barriers`, `sidewalks`, `pothole`
+- **The official train/val split leaks.** 1,158 val images (16%) are byte-identical copies of train images, and 1,648 incident tickets have photos in both splits. See the [data audit](reports/data_audit/report.md).
+- **New splits (v1):** after removing 1,271 exact duplicates, the 30,524 unique images are split 80/10/10 by incident ticket, so no incident appears in two splits. Lists are in [`splits/`](splits/summary.md) and are rebuilt with `python src/make_splits.py --data <root> --install`.
 - Images loaded by the notebook: 31,795. This counts images, not objects: the baseline keeps only the first object listed in each label file.
 
 ```
@@ -110,8 +112,8 @@ Green boxes are the ground truth, red boxes the predictions. Known display issue
 
 ## Roadmap
 
-1. **Audit the data.** Count objects per class, check EXIF orientation, find near-duplicate images and look at box sizes.
-2. **Fix the evaluation.** Keep a fixed train/val split and an independent test set with near-duplicates removed.
+1. ~~**Audit the data.**~~ Done: [`reports/data_audit`](reports/data_audit/report.md).
+2. ~~**Fix the evaluation.**~~ Done: leak-free v1 splits by incident ticket in [`splits/`](splits/summary.md).
 3. **Retrain with a real detector.** Train Ultralytics YOLO on the original multi-object labels and report mAP@50 and mAP@50-95 per class, with the v0 model evaluated on the same test set for comparison.
 4. **Analyse errors per class and object size.** Try a higher resolution or class rebalancing only if this analysis shows they are needed.
 5. **Make it reproducible.** Add scripts, configs, `requirements.txt` and released weights.

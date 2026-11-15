@@ -1,0 +1,11 @@
+# Ultralytics dataset config for the leak-free v1 splits.
+# Easiest: run  python src/make_splits.py --data "<dataset root>" --install
+# which writes this file with the real path into the dataset root.
+# Or set `path` below to the dataset root and copy splits/*.txt there as
+# {train,val,test}_v1.txt with every line prefixed by "./".
+path: /path/to/Visual Pollution Dataset
+train: train_v1.txt
+val: val_v1.txt
+test: test_v1.txt
+nc: 3
+names: ['barriers', 'sidewalks', 'pothole']
