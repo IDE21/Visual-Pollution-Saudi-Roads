@@ -1,0 +1,107 @@
+{
+  "splits": {
+    "train": {
+      "images": 24553,
+      "labels": 24553,
+      "missing_label": 0,
+      "empty_label": 0,
+      "bad_files": 0,
+      "orphan_label": 0,
+      "unreadable": 0,
+      "labelled_images": 24553,
+      "objects": 32202,
+      "multi_object_images": 5764,
+      "objects_per_class": {
+        "sidewalks": 5663,
+        "pothole": 19960,
+        "barriers": 6579
+      },
+      "images_with_class": {
+        "sidewalks": 5153,
+        "pothole": 16506,
+        "barriers": 4868
+      },
+      "objects_per_image_hist": {
+        "1": 18789,
+        "2": 4476,
+        "3": 974,
+        "7": 18,
+        "6": 33,
+        "4": 191,
+        "5": 50,
+        "10": 7,
+        "8": 8,
+        "9": 5,
+        "11": 2
+      },
+      "sizes": {
+        "460x600": 16457,
+        "450x600": 8096
+      },
+      "orientation": {
+        "1": 24553
+      }
+    },
+    "val": {
+      "images": 7242,
+      "labels": 7242,
+      "missing_label": 0,
+      "empty_label": 0,
+      "bad_files": 0,
+      "orphan_label": 0,
+      "unreadable": 0,
+      "labelled_images": 7242,
+      "objects": 9602,
+      "multi_object_images": 1836,
+      "objects_per_class": {
+        "pothole": 6015,
+        "barriers": 1838,
+        "sidewalks": 1749
+      },
+      "images_with_class": {
+        "pothole": 4923,
+        "barriers": 1454,
+        "sidewalks": 1556
+      },
+      "objects_per_image_hist": {
+        "1": 5406,
+        "3": 315,
+        "2": 1441,
+        "7": 2,
+        "5": 16,
+        "4": 53,
+        "11": 1,
+        "6": 6,
+        "8": 2
+      },
+      "sizes": {
+        "460x600": 4776,
+        "450x600": 2466
+      },
+      "orientation": {
+        "1": 7242
+      }
+    }
+  },
+  "exact_duplicates": {
+    "train_within": 104,
+    "val_within": 14,
+    "val_in_train": 1158,
+    "unique_images": 30524
+  },
+  "near_duplicates": {
+    "train_train": 12236,
+    "val_val": 842,
+    "val_train": 7608,
+    "val_images_with_train_dup": 1574
+  },
+  "incidents": {
+    "train": 22600,
+    "val": 6969,
+    "no_id": 0,
+    "shared": 1648,
+    "val_images_shared": 1872,
+    "median_photos": 1,
+    "max_photos": 16
+  }
+}
