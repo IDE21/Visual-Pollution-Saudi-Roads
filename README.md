@@ -1,112 +1,122 @@
 # Visual-Pollution-Saudi-Roads
 
+> **Status: under revision.** This repository contains a first baseline (v0). A review found errors in how its results were reported and limitations in how it was trained and evaluated. They are documented below, and the numbers here are now the corrected ones. A rebuilt version based on a real YOLO detector is in progress (see [Roadmap](#roadmap)).
+
 ## Overview
 
-This repository provides a **deep learning model** aimed at detecting and classifying road features such as **barriers**, **sidewalks**, and **potholes** in images. The model uses **YOLO (You Only Look Once)** for **real-time object detection** and includes performance evaluation with metrics like **confusion matrices**. The project focuses on both **image classification** and **bounding box localization** tasks, aimed at identifying and localizing road features for better understanding and management.
+This project detects three types of visual pollution in images of Saudi public roads: **barriers**, **sidewalks** (dilapidated sidewalks) and **potholes**.
 
-This model is intended for developers and researchers interested in real-time object detection for road features, and it provides a base for further optimization and exploration.
+The current notebook ([`YOLO_VSMODEL.ipynb`](YOLO_VSMODEL.ipynb)) is a **baseline**. Its model is a small custom CNN that is **YOLO-inspired, not YOLO**. For each image it predicts:
+
+- one class label, and
+- one bounding box.
+
+It cannot detect more than one object per image. It has not been benchmarked for speed, so no real-time claim is made.
 
 ## Dataset
 
-The dataset used in this project consists of labeled images of **barriers**, **sidewalks**, and **potholes**. These images are manually annotated to help the model classify and detect these road features efficiently. The dataset was utilized to train and evaluate the model’s performance in both classification and bounding box localization tasks.
+The data is the **Saudi Arabia Public Roads Visual Pollution Dataset** by AlElaiwi et al. (2022), published on Mendeley Data under the **CC BY 4.0** license. This project uses the dataset as published. The annotations are the dataset authors' work.
 
-You can access and download the dataset used in this project via the following link:
+- Download: https://data.mendeley.com/datasets/bb7b8vtwry/1
+- Classes used here: `barriers`, `sidewalks`, `pothole`
+- Images loaded by the notebook: 31,795. This counts images, not objects: the baseline keeps only the first object listed in each label file.
 
-👉 [Download Dataset](https://data.mendeley.com/datasets/bb7b8vtwry/1)
+```
+AlElaiwi, M., Ahmad, H., Hussain, J., Al-antari, M., Almarri, B., & Azhar, A. (2022).
+Saudi Arabia Public Roads Visual Pollution Dataset (Version 1) [Data set]. Mendeley Data.
+https://doi.org/10.17632/bb7b8vtwry.1 — Licensed under CC BY 4.0
+```
 
-The dataset contains a variety of road images with different lighting, angles, and conditions, which provides a challenge for the model to generalize well.
+## Baseline model (v0)
 
-## Model Description
+- **Input:** images resized to 128×128 without keeping the aspect ratio
+- **Backbone:** 3 × (Conv2D + MaxPooling)
+- **Heads:**
+  - a softmax head for the class
+  - a sigmoid head for one box `[cx, cy, w, h]`
+- **Losses:**
+  - focal loss (γ=2, α=0.25) for the class
+  - MSE for the box
+- **Training:**
+  - Adam (lr=1e-4), batch size 8
+  - early stopping on the class loss (stopped at epoch 22, best weights from epoch 17)
 
-The core of this project is based on the **YOLO (You Only Look Once)** algorithm, a state-of-the-art real-time object detection model. YOLO is designed to predict multiple bounding boxes and the corresponding class labels from the input image in a single pass.
+## Results (v0, corrected)
 
-### **Model Highlights:**
+Evaluated on a random 20% split of train+val (6,359 images).
 
-* **YOLO Architecture** is used to classify **barriers**, **sidewalks**, and **potholes** in road images.
-* The model predicts **bounding boxes** and **classification labels** for each detected feature.
-* YOLO allows the model to operate in **real-time**, making it suitable for applications such as autonomous vehicles and traffic management systems.
+> ⚠️ This split was also used for early stopping, so these numbers are **optimistic**. There is no independent test set yet.
 
----
+### Classification
 
-## Performance and Results
+| Class | Precision | Recall | F1 |
+|---|---|---|---|
+| barriers | 0.467 | 0.379 | 0.419 |
+| sidewalks | 0.589 | 0.384 | 0.465 |
+| pothole | 0.786 | 0.903 | 0.841 |
 
-### **1. Bounding Box Localization Confusion Matrix (IoU >= 0.5)**
+- **Accuracy:** 0.720.
+- **Majority-class baseline:** always predicting `pothole` would score about 0.648 on this split.
 
-This confusion matrix evaluates the performance of the model for **bounding box localization** using an **Intersection over Union (IoU)** threshold of **>= 0.5**. It evaluates how accurately the predicted bounding boxes overlap with the ground truth boxes. The matrix shows:
+![Classification confusion matrix](output/classification_confusion_matrix.png)
 
-* **True positives** (1782): These are the correctly predicted objects.
-* **False positives** (456): Instances where the model incorrectly predicted an object.
-* **False negatives** (4121): Instances where the model failed to detect the object.
+Barriers and sidewalks are most often predicted as potholes, which is also the dominant class (about 64% of images).
 
-This indicates that while the model can detect certain road features, the localization of these features is still not accurate enough for real-world applications.
+### Localization
 
----
+| Metric | Value |
+|---|---|
+| Mean IoU | 0.166 |
+| IoU ≥ 0.5 | 8.1% |
+| IoU ≥ 0.75 | 0.6% |
+| Mean absolute error of box coordinates | 0.124 |
 
-### **2. Classification Confusion Matrix**
+![Bounding box localization matrix](output/bbox_confusion_matrix.png)
 
-The classification confusion matrix shows the results for classifying the road features into **barriers**, **sidewalks**, and **potholes**. Here’s a summary of the performance:
+**How to read this matrix** (rows: is the class correct? columns: is the box correct, IoU ≥ 0.5?):
 
-* **Potholes** are classified correctly most of the time, but **sidewalks** and **barriers** suffer from significant misclassifications.
-* **Sidewalks** and **barriers** are often misclassified as **potholes**, reflecting a need for better feature separation and better training for these features.
+| | Box correct | Box incorrect |
+|---|---|---|
+| **Class correct** | **456 (7.2%)**: fully correct detections | 4,121: right class, wrong box |
+| **Class incorrect** | 0 | 1,782: wrong class and wrong box |
 
----
+Only **456 of 6,359** test images (7.2%) have both the right class and a box with IoU ≥ 0.5.
 
-### **3. Object Detection Results**
+> An earlier version of this README labelled 1,782 as "true positives", 456 as "false positives" and 4,121 as "false negatives". That reading was wrong.
 
-The detection results show how the model detects road features, represented by **bounding boxes**. The **true labels** are marked with **green boxes**, while **predicted labels** are marked with **red boxes**. The visual outputs demonstrate that the model correctly detects **potholes** but struggles with **sidewalks** and **barriers**.
+> The code that produced this matrix is not in the notebook. Its total of 456 boxes with IoU ≥ 0.5 also differs from the notebook's printed 8.1% (about 514). It will be regenerated in the next version.
 
-* **True positives**: The model correctly identifies objects, especially potholes.
-* **False positives/negatives**: The model misidentifies or fails to identify sidewalk and barrier objects, indicating that more data or a different architecture may improve these detections.
+### Sample predictions
 
----
+![Sample predictions](output/detection_results.png)
 
-## Challenges Identified:
+Green boxes are the ground truth, red boxes the predictions. Known display issues in this figure:
 
-1. **Misclassification**: The model struggles with distinguishing **sidewalks** and **barriers** from **potholes**, often misclassifying them due to similarities in appearance or insufficient feature extraction.
-2. **Localization**: Bounding box localization has notable issues, with **false negatives** being quite high, which means the model is missing many objects or misplacing the bounding boxes.
+- Colours are swapped: the image is OpenCV BGR shown as RGB.
+- Some labels are cut off at the image edge.
 
----
+## Known issues in v0
 
-## Model Improvement Strategies
+1. **Not a YOLO detector.** The model predicts one box per image. Every label line after the first is discarded.
+2. **Augmentation corrupts boxes.** Flips, shifts, rotation and zoom are applied to the images, but the box coordinates are not transformed with them. This is a major cause of the low IoU.
+3. **Evaluation leakage.** Train and val were merged and re-split at random, and the "test" split was used for early stopping.
+4. **Class imbalance is not addressed.** Focal loss uses one α for all classes, and no class weighting is applied.
+5. **Low resolution.** Resizing to 128×128 without keeping the aspect ratio makes small barriers and sidewalks hard to see.
+6. **Not reproducible.**
+   - Paths are hard-coded to Google Drive.
+   - There is no `requirements.txt`.
+   - The trained weights are not published.
+   - Training is forced onto the CPU.
 
-### **1. Data Augmentation**:
+## Roadmap
 
-* **Expand the dataset** by using **data augmentation techniques** such as rotation, scaling, cropping, flipping, and color jittering. This can help the model generalize better to unseen data.
-* Consider incorporating **synthetic data** using generative models to create more examples of rare road features (e.g., cracks or damage in sidewalks).
-
-### **2. Use of Advanced Architectures**:
-
-* Experiment with **YOLOv4**, **YOLOv5**, or other state-of-the-art architectures like **EfficientDet** or **Faster R-CNN** for improved detection accuracy, especially for smaller objects like **sidewalks** and **barriers**.
-* **Multi-scale feature extraction** could help improve the detection of smaller features.
-
-### **3. Hyperparameter Tuning**:
-
-* **Tune hyperparameters** such as **learning rate**, **batch size**, and **number of epochs** to optimize the model's training process.
-* Experiment with **IoU thresholds** and **anchor box sizes** to better capture the object shapes and sizes.
-
-### **4. Incorporating Attention Mechanisms**:
-
-* Use **attention mechanisms** to allow the model to focus more on the relevant parts of the image, such as **sidewalks** and **barriers**, which may be smaller or have less contrast compared to **potholes**.
-
-### **5. Ensemble Methods**:
-
-* **Combine multiple models** (e.g., YOLO + Faster R-CNN) to leverage the strengths of each, which could improve both classification and localization performance.
-
-### **6. Post-Processing Techniques**:
-
-* Use **Non-Maximum Suppression (NMS)** to remove duplicate bounding boxes for each object.
-* Incorporate **Class Activation Mapping (CAM)** or **Grad-CAM** to visualize which parts of the image the model is focusing on, ensuring that it is paying attention to the right features.
-
----
-
-## Conclusion
-
-While the model shows reasonable performance in detecting **potholes**, its **classification accuracy** and **bounding box localization** for **sidewalks** and **barriers** leave much to be desired. The results from the **confusion matrices** and **object detection outputs** reveal the need for significant improvements.
-
-If you have a better solution or a way to improve the model's performance and achieve better accuracy and results, please **fork this repository**, make your changes, and submit a pull request. I will be happy to review and accept your work!
-
----
+1. **Audit the data.** Count objects per class, check EXIF orientation, find near-duplicate images and look at box sizes.
+2. **Fix the evaluation.** Keep a fixed train/val split and an independent test set with near-duplicates removed.
+3. **Retrain with a real detector.** Train Ultralytics YOLO on the original multi-object labels and report mAP@50 and mAP@50-95 per class, with the v0 model evaluated on the same test set for comparison.
+4. **Analyse errors per class and object size.** Try a higher resolution or class rebalancing only if this analysis shows they are needed.
+5. **Make it reproducible.** Add scripts, configs, `requirements.txt` and released weights.
+6. **Publish a demo** and measure inference speed on named hardware.
 
 ## Contributions
 
-Feel free to **fork** the repository and contribute if you have suggestions for improving the model or if you have another approach to achieving better results and performance. Contributions are welcome!
+Issues and pull requests are welcome.
