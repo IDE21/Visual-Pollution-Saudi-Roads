@@ -178,3 +178,7 @@ Green boxes are the ground truth, red boxes the predictions. Known display issue
 ## Contributions
 
 Issues and pull requests are welcome.
+
+## License
+
+Code: [MIT](LICENSE). The images and labels follow the license of the original dataset (AlElaiwi et al., 2022).
