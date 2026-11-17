@@ -1,6 +1,6 @@
 # Visual-Pollution-Saudi-Roads
 
-> **Status: v1 released, work in progress.** v1 is a real YOLO11s detector trained and tested on leak-free splits. The first baseline (v0) is kept below for reference, with its corrected numbers. The next phase is in [`docs/PLAN.md`](docs/PLAN.md).
+> **Status: v1 released, work in progress.** v1 is a real YOLO11s detector trained and tested on leak-free splits. The first baseline (v0) is kept below for reference, with its corrected numbers. The next phase is in [`docs/PLAN_v2.md`](docs/PLAN_v2.md).
 
 ## Overview
 
@@ -55,7 +55,17 @@ The two protocols differ:
 | Model | YOLOv5x, 100–250 epochs, hyperparameter evolution | YOLO11s, 50 epochs, defaults |
 | mAP type | Not stated | mAP50 and mAP50-95 |
 
-The headline numbers are **not directly comparable**. The [data audit](reports/data_audit/report.md) found that, in the official split, 16% of val images are exact copies of train images. A random image-level split puts copies and photos of the same incident in both train and test. The next phase measures how much a random split inflates **this** model's score (see [`docs/PLAN.md`](docs/PLAN.md), Track A).
+The headline numbers are **not directly comparable**: the split, the labels, the model and the metric definition all differ.
+
+**How much does a random split explain?** We measured it on our own model ([Track A report](reports/trackA/report.md)). We trained the same YOLO11s on a random image-level 70/10/20 split, as in the paper, and tested it on both its random test set and our clean test set:
+
+| YOLO11s, 640 px | mAP50 [95% CI] |
+|---|---|
+| Random split, random test set | 0.698 [0.685, 0.712] |
+| Random split, clean test set | 0.674 [0.656, 0.693] |
+| Clean split (v1), clean test set | 0.697 [0.680, 0.716] |
+
+The random split raises our score by only **2.4 mAP50 points** (95% CI 0.1–4.8). Exact duplicates are memorized (mAP50 0.90 on them), but they are only 5.5% of the random test set. So **leakage alone does not explain the gap** to the paper's 93% under our replication. The remaining gap may come from the per-class split, the active-learning test labels, the much larger YOLOv5x, or a different mAP definition; we cannot tell which from the paper.
 
 ## Reproduce v1
 
@@ -169,9 +179,10 @@ Green boxes are the ground truth, red boxes the predictions. Known display issue
 1. ~~**Audit the data.**~~ Done: [`reports/data_audit`](reports/data_audit/report.md).
 2. ~~**Fix the evaluation.**~~ Done: leak-free v1 splits by incident ticket in [`splits/`](splits/summary.md).
 3. ~~**Retrain with a real detector.**~~ Done: YOLO11s, results above. The v0 model cannot be re-evaluated on the new test split because its weights were never saved.
-4. **Next phase:** see [`docs/PLAN.md`](docs/PLAN.md). It covers:
+4. **Next phase:** see [`docs/PLAN_v2.md`](docs/PLAN_v2.md). It covers:
    - pre-processing of train and val (quality filter, near-duplicates, label review);
-   - measuring the random-split inflation;
+   - ~~measuring the random-split inflation~~ (done: about 2.4 mAP50 points, see the [Track A report](reports/trackA/report.md));
+   - an external pothole benchmark, the paper's one like-for-like number;
    - higher resolution and longer training;
    - released weights and a demo.
 

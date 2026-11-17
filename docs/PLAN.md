@@ -1,5 +1,7 @@
 # Plan: next phase
 
+> **Superseded.** Track A is done; its result is in [`reports/trackA/report.md`](../reports/trackA/report.md). The open parts of this plan continue in [`PLAN_v2.md`](PLAN_v2.md).
+
 This plan was reviewed by an advisory council (methodologist, domain expert, critical reviewer, licensing/privacy guardian, strategist). Their main changes are folded in below.
 
 ## Where we are
@@ -10,6 +12,7 @@ This plan was reviewed by an advisory council (methodologist, domain expert, cri
 | Leak-free v1 splits (by incident, exact duplicates removed) | Done ([`splits/`](../splits/summary.md)) |
 | YOLO11s, 640 px, 50 epochs, v1 splits | Done ([`reports/yolo11s_640_v1`](../reports/yolo11s_640_v1)) |
 | Clean test result | mAP50 0.699, mAP50-95 0.473 |
+| Track A (random-split inflation) | Done: +2.4 mAP50 points, too small to explain the gap to the paper |
 
 The dataset paper (AlElaiwi et al., 2022, *Mathematics* 11(1):186) reports 89% precision/F1 and 93% mAP. That number comes from:
 
@@ -48,7 +51,11 @@ On an external pothole dataset, the paper reports 70% mAP.
 
 Each change is kept only if it improves val mAP50-95 beyond the CI.
 
-## Track A: measure the leak (fair comparison with the paper)
+## Track A: measure the leak (done)
+
+Result: a random split raised our model's mAP50 by 2.4 points (95% CI 0.1–4.8). Leakage does not explain the gap to the paper's 93% under our replication. Details: [`reports/trackA/report.md`](../reports/trackA/report.md).
+
+Original protocol:
 
 1. Hold out C and every incident it contains.
 2. From the rest, build a random image-level 70/10/20 split, as in the paper, keeping the duplicates.
