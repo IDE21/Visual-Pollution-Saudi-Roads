@@ -67,6 +67,8 @@ The headline numbers are **not directly comparable**: the split, the labels, the
 
 The random split raises our score by only **2.4 mAP50 points** (95% CI 0.1–4.8). Exact duplicates are memorized (mAP50 0.90 on them), but they are only 5.5% of the random test set. So **leakage alone does not explain the gap** to the paper's 93% under our replication. The remaining gap may come from the per-class split, the active-learning test labels, the much larger YOLOv5x, or a different mAP definition; we cannot tell which from the paper.
 
+**External pothole benchmark** ([report](reports/external_pothole/report.md)). On the same Roboflow pothole dataset the paper used for its external test (1,482 images), v1 without fine-tuning reaches pothole mAP50 **0.551** [0.536, 0.568], with P 0.63 and R 0.49. The paper reports 70% mAP, P 0.81 and R 0.75 there, so **on this benchmark the paper's model is ahead**. Potholes in that dataset are about 5× smaller and 3× denser than in ours, which our 640 px model handles poorly.
+
 ## Reproduce v1
 
 ```bash
