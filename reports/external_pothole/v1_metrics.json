@@ -1,5 +1,5 @@
 {
-  "preds": "/private/tmp/claude-501/-Users-enad-Library-Application-Support-Claude-scratch-workspaces-b8f52bea-f03d-437f-b3f6-2d8038c3dbe4-321dbc14-3f96-4b3a-b2dd-8103db3c611c-scratch-2026-11-15-1410a6/dbfe6239-69f2-4d2d-9417-46ddac526fa4/scratchpad/preds_v1_extpothole.npz",
+  "preds": "<local>/preds_v1_extpothole.npz",
   "images": 1482,
   "incidents": 1482,
   "n_boot": 2000,
