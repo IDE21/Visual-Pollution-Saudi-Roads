@@ -6,6 +6,7 @@ Prerequisite: python src/make_splits.py --data "<dataset root>" --install
 Usage:
     python src/train.py --data "<dataset root>/data_v1.yaml" --model yolo11s.pt --imgsz 640 --epochs 50
     python src/train.py --data ... --fraction 0.02 --epochs 1 --name smoke   # quick check
+    python src/train.py --data ... --fraction 0.5 --epochs 40 --no-test      # screening, val only
 
 After training, the best weights are evaluated on the held-out test split and
 the metrics are written to <run dir>/test_metrics.json.
@@ -43,6 +44,7 @@ def main() -> None:
     p.add_argument("--seed", default=42, type=int)
     p.add_argument("--project", default="runs", help="output folder")
     p.add_argument("--name", default="yolo11s_640_v1")
+    p.add_argument("--no-test", action="store_true", help="skip the test-split evaluation (screening runs decide on val only)")
     args = p.parse_args()
 
     device = args.device or pick_device()
@@ -54,6 +56,9 @@ def main() -> None:
     )
 
     run_dir = Path(model.trainer.save_dir)
+    if args.no_test:
+        print(f"done; test split not evaluated (--no-test). Weights: {run_dir / 'weights' / 'best.pt'}")
+        return
     best = YOLO(run_dir / "weights" / "best.pt")
     m = best.val(data=args.data, split="test", imgsz=args.imgsz, batch=args.batch, device=device,
                  project=str(run_dir), name="test", exist_ok=True, plots=True)
