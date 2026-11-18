@@ -1,26 +1,25 @@
 # Visual-Pollution-Saudi-Roads
 
-> **Status: v1 released, work in progress.** v1 is a real YOLO11s detector trained and tested on leak-free splits. The first baseline (v0) is kept below for reference, with its corrected numbers. The next phase is in [`docs/PLAN_v2.md`](docs/PLAN_v2.md).
+Detecting **barriers**, **dilapidated sidewalks** and **potholes** in photos of Saudi public roads. The project also re-evaluates the dataset paper's model on a leak-free test set.
 
-## Overview
+> **Status:** v1 released; plan v2 in progress ([`docs/PLAN_v2.md`](docs/PLAN_v2.md)). Weights and a demo are not published yet.
 
-This project detects three types of visual pollution in images of Saudi public roads: **barriers**, **sidewalks** (dilapidated sidewalks) and **potholes**.
+## Key results
 
-| Version | Model | Evaluation | Headline |
-|---|---|---|---|
-| **v1** | Ultralytics YOLO11s, 640 px, all objects per image | Held-out test split, grouped by incident, no duplicates | **mAP50 0.699, mAP50-95 0.473** |
-| v0 | Small custom CNN (YOLO-inspired, not YOLO), one box per image | Random split also used for early stopping (leaky) | Accuracy 0.720, mean IoU 0.166 |
+| | Result |
+|---|---|
+| **v1** (YOLO11s, 640 px) on a clean test set, split by incident | **mAP50 0.699 [0.680, 0.716], mAP50-95 0.473** |
+| Dataset paper (YOLOv5x, random split) | 93% mAP (type not stated) |
+| Effect of the paper's random split on our model | Only **+2.4 mAP50** [0.1, 4.8], so leakage does not explain the gap |
+| Same external pothole set as the paper (1,482 images, no fine-tuning) | **0.551** vs the paper's 70%: **the paper is ahead** |
+| Label errors among the model's flagged cases on val | **56%** [42, 69], about 11–18% of all val labels |
+| 960 px vs 640 px (paired, val) | No difference: mAP50-95 **+0.000** [−0.010, +0.009], at 2× the cost |
 
-## Results (v1, YOLO11s)
+All CIs are 95% bootstrap intervals, resampled by incident (by image for the external set).
 
-**Setup:**
-- Model: YOLO11s with COCO-pretrained weights, input 640 px.
-- Training: 50 epochs, batch 16, seed 42, default Ultralytics augmentation.
-- Hardware: Apple M5 Pro (MPS), about 13 min per epoch.
-- Best checkpoint: epoch 46. Validation mAP was still rising at the end, so longer training should help.
-- Script: [`src/train.py`](src/train.py). Full outputs: [`reports/yolo11s_640_v1`](reports/yolo11s_640_v1).
+## v1 on the clean test set
 
-**Test split** (3,053 images, never seen in training or model selection):
+3,053 images, never used in training or model selection.
 
 | Class | Precision | Recall | mAP50 | mAP50-95 |
 |---|---|---|---|---|
@@ -29,169 +28,74 @@ This project detects three types of visual pollution in images of Saudi public r
 | pothole | 0.714 | 0.734 | 0.797 | 0.546 |
 | **all** | **0.649** | **0.663** | **0.699** | **0.473** |
 
-**Errors and speed:**
-- Once an object is detected, the class is usually right: the confusion-matrix diagonal is 0.94 (barriers), 0.93 (sidewalks) and 0.98 (pothole).
-- Most errors are **false alarms on background**. 55% of them are predicted as potholes.
-- Speed: about 5 ms per image in batches of 16 on the M5 Pro (0.4 ms inference + 4.5 ms NMS).
-
-![Training curves](reports/yolo11s_640_v1/results.png)
-
-![Test confusion matrix (normalized)](reports/yolo11s_640_v1/test/confusion_matrix_normalized.png)
+- **Setup:** COCO-pretrained YOLO11s, 640 px, 50 epochs, batch 16, seed 42, default augmentation. Best epoch 46; val mAP was still rising.
+- **Errors:** when an object is found, its class is almost always right (confusion-matrix diagonal 0.93–0.98). Most errors are false alarms on background, and 55% of these are predicted as potholes.
+- **Speed:** about 5 ms per image on an Apple M5 Pro (batch 16, NMS included).
+- Outputs, curves and plots: [`reports/yolo11s_640_v1`](reports/yolo11s_640_v1).
 
 ![Test predictions](reports/yolo11s_640_v1/test/val_batch0_pred.jpg)
 
-### Comparison with the dataset paper
+## What we found
 
-The dataset paper ([AlElaiwi et al., 2022, *Mathematics* 11(1):186](https://doi.org/10.3390/math11010186)) reports:
-- 89% precision, 88% recall, 89% F1 and 93% mAP, using YOLOv5x;
-- 70% mAP when re-tested on an external pothole dataset.
+1. **The official split leaks.** 16% of the val images are byte-identical copies of train images, and 1,648 incidents have photos in both splits. v1 removes 1,271 duplicates and splits the data 80/10/10 by incident. → [data audit](reports/data_audit/report.md), [`splits/`](splits/summary.md)
+2. **Leakage is small for our model.** We trained YOLO11s on a random 70/10/20 split, as in the paper, and it scored only 2.4 mAP50 points higher. The rest of the gap to 93% may come from the much larger YOLOv5x, the per-class split, the active-learning labels, or the mAP definition. The paper does not give enough detail to tell. → [Track A](reports/trackA/report.md)
+3. **The paper's model is better on the external potholes**, 70% vs our 55%. External potholes are about 5× smaller and 3× denser than ours. Larger inference sizes and SAHI slicing made v1 *worse* (−3 to −11 points), and training at 960 px helped by only one point. The gap is mostly a difference in what counts as a pothole, not in resolution. → [external benchmark](reports/external_pothole/report.md)
+4. **The labels are noisy.** The model flagged 1,046 likely label errors on val. The owner reviewed a random 50 of them blind, and 56% were real label errors: mostly missing or false labels, rarely loose boxes. Our measured scores are therefore pessimistic, and the class definitions need a written guide. → [label audit](reports/label_audit/report.md), [draft guide](docs/LABEL_GUIDE.md)
+5. **Resolution is not the bottleneck.** We compared 640 and 960 px under the same settings, and the overall difference was zero. Potholes gained +0.9 mAP50-95, which is real but small. We keep 640 px. → [resolution screening](reports/resolution_screen/report.md)
 
-The two protocols differ:
+**Limits:**
+- One seed per setting.
+- The label audit covers 50 human-judged cases from one reviewer.
+- The paper's external-test protocol is not documented, so that comparison is approximate.
 
-| | Paper | This repo (v1) |
-|---|---|---|
-| Split | Random per class, 70/10/20, image level | Grouped by incident ticket, exact duplicates removed, 80/10/10 |
-| Labels | Mostly generated by deep active learning from 1,200 hand-labelled images | The released labels, as published |
-| Model | YOLOv5x, 100–250 epochs, hyperparameter evolution | YOLO11s, 50 epochs, defaults |
-| mAP type | Not stated | mAP50 and mAP50-95 |
+## Next steps
 
-The headline numbers are **not directly comparable**: the split, the labels, the model and the metric definition all differ.
+From [plan v2](docs/PLAN_v2.md) and the [label-cleaning plan](docs/PLAN_labels.md):
+1. A baseline run at 640 px on all data for 100 epochs.
+2. Label cleaning, starting with a cheap 2-fold pilot and then human review.
+3. A single final evaluation on the clean test set and the external set.
+4. Publishing the weights with a model card, and a Gradio demo.
 
-**How much does a random split explain?** We measured it on our own model ([Track A report](reports/trackA/report.md)). We trained the same YOLO11s on a random image-level 70/10/20 split, as in the paper, and tested it on both its random test set and our clean test set:
-
-| YOLO11s, 640 px | mAP50 [95% CI] |
-|---|---|
-| Random split, random test set | 0.698 [0.685, 0.712] |
-| Random split, clean test set | 0.674 [0.656, 0.693] |
-| Clean split (v1), clean test set | 0.697 [0.680, 0.716] |
-
-The random split raises our score by only **2.4 mAP50 points** (95% CI 0.1–4.8). Exact duplicates are memorized (mAP50 0.90 on them), but they are only 5.5% of the random test set. So **leakage alone does not explain the gap** to the paper's 93% under our replication. The remaining gap may come from the per-class split, the active-learning test labels, the much larger YOLOv5x, or a different mAP definition; we cannot tell which from the paper.
-
-**External pothole benchmark** ([report](reports/external_pothole/report.md)). On the same Roboflow pothole dataset the paper used for its external test (1,482 images), v1 without fine-tuning reaches pothole mAP50 **0.551** [0.536, 0.568], with P 0.63 and R 0.49. The paper reports 70% mAP, P 0.81 and R 0.75 there, so **on this benchmark the paper's model is ahead**. Potholes in that dataset are about 5× smaller and 3× denser than in ours, which our 640 px model handles poorly.
-
-## Reproduce v1
+## Reproduce
 
 ```bash
 pip install -r requirements-train.txt
 python src/make_splits.py --data "<dataset root>" --install
 python src/train.py --data "<dataset root>/data_v1.yaml"
+python src/eval_ci.py predict --weights runs/.../best.pt --list "<dataset root>/test_v1.txt" --out preds.npz
+python src/eval_ci.py score preds.npz
 ```
 
-The trained weights (`best.pt`, 18 MB) are not in the repository yet. They will be published with the next release.
+Other scripts:
+
+| Script | Purpose |
+|---|---|
+| [`scripts/screen_resolution.sh`](scripts/screen_resolution.sh) | 640 vs 960 screening |
+| [`src/prep_external_pothole.py`](src/prep_external_pothole.py) | External pothole set |
+| [`src/predict_sahi.py`](src/predict_sahi.py) | SAHI inference |
+| [`src/label_audit.py`](src/label_audit.py) | Label audit |
 
 ## Dataset
 
-The data is the **Saudi Arabia Public Roads Visual Pollution Dataset** by AlElaiwi et al. (2022), published on Mendeley Data under the **CC BY 4.0** license. This project uses the dataset as published. The annotations are the dataset authors' work.
-
-- Download: https://data.mendeley.com/datasets/bb7b8vtwry/1
-- Classes used here: `barriers`, `sidewalks`, `pothole`
-- **The official train/val split leaks.** 1,158 val images (16%) are byte-identical copies of train images, and 1,648 incident tickets have photos in both splits. See the [data audit](reports/data_audit/report.md).
-- **New splits (v1):** after removing 1,271 exact duplicates, the 30,524 unique images are split 80/10/10 by incident ticket, so no incident appears in two splits. Lists are in [`splits/`](splits/summary.md) and are rebuilt with `python src/make_splits.py --data <root> --install`.
-- Images in the downloaded copy: 31,795, holding 41,804 labelled objects. The v0 notebook kept only the first object per label file, so it dropped 23.9% of the objects. v1 uses all of them.
+**Saudi Arabia Public Roads Visual Pollution Dataset**, AlElaiwi et al. (2022), on Mendeley Data under **CC BY 4.0**.
+- 31,795 images and 41,804 labelled objects.
+- Classes used here: `barriers`, `sidewalks`, `pothole`.
+- The labels are the dataset authors' work, used as published.
 
 ```
 AlElaiwi, M., Ahmad, H., Hussain, J., Al-antari, M., Almarri, B., & Azhar, A. (2022).
 Saudi Arabia Public Roads Visual Pollution Dataset (Version 1) [Data set]. Mendeley Data.
-https://doi.org/10.17632/bb7b8vtwry.1 — Licensed under CC BY 4.0
+https://doi.org/10.17632/bb7b8vtwry.1
 ```
 
-## Baseline model (v0, superseded)
+The dataset paper is AlElaiwi et al. (2022), [*Mathematics* 11(1):186](https://doi.org/10.3390/math11010186). The external pothole set is the Roboflow [Pothole Detection Dataset v2](https://universe.roboflow.com/aegis/pothole-detection-i00zy), CC BY 4.0.
 
-- **Input:** images resized to 128×128 without keeping the aspect ratio
-- **Backbone:** 3 × (Conv2D + MaxPooling)
-- **Heads:**
-  - a softmax head for the class
-  - a sigmoid head for one box `[cx, cy, w, h]`
-- **Losses:**
-  - focal loss (γ=2, α=0.25) for the class
-  - MSE for the box
-- **Training:**
-  - Adam (lr=1e-4), batch size 8
-  - early stopping on the class loss (stopped at epoch 22, best weights from epoch 17)
+## History
 
-## Results (v0, corrected)
-
-Evaluated on a random 20% split of train+val (6,359 images).
-
-> ⚠️ This split was also used for early stopping, so these numbers are **optimistic**. There is no independent test set yet.
-
-### Classification
-
-| Class | Precision | Recall | F1 |
-|---|---|---|---|
-| barriers | 0.467 | 0.379 | 0.419 |
-| sidewalks | 0.589 | 0.384 | 0.465 |
-| pothole | 0.786 | 0.903 | 0.841 |
-
-- **Accuracy:** 0.720.
-- **Majority-class baseline:** always predicting `pothole` would score about 0.648 on this split.
-
-![Classification confusion matrix](output/classification_confusion_matrix.png)
-
-Barriers and sidewalks are most often predicted as potholes, which is also the dominant class (about 64% of images).
-
-### Localization
-
-| Metric | Value |
-|---|---|
-| Mean IoU | 0.166 |
-| IoU ≥ 0.5 | 8.1% |
-| IoU ≥ 0.75 | 0.6% |
-| Mean absolute error of box coordinates | 0.124 |
-
-![Bounding box localization matrix](output/bbox_confusion_matrix.png)
-
-**How to read this matrix** (rows: is the class correct? columns: is the box correct, IoU ≥ 0.5?):
-
-| | Box correct | Box incorrect |
-|---|---|---|
-| **Class correct** | **456 (7.2%)**: fully correct detections | 4,121: right class, wrong box |
-| **Class incorrect** | 0 | 1,782: wrong class and wrong box |
-
-Only **456 of 6,359** test images (7.2%) have both the right class and a box with IoU ≥ 0.5.
-
-> An earlier version of this README labelled 1,782 as "true positives", 456 as "false positives" and 4,121 as "false negatives". That reading was wrong.
-
-> The code that produced this matrix is not in the notebook. Its total of 456 boxes with IoU ≥ 0.5 also differs from the notebook's printed 8.1% (about 514). It will be regenerated in the next version.
-
-### Sample predictions
-
-![Sample predictions](output/detection_results.png)
-
-Green boxes are the ground truth, red boxes the predictions. Known display issues in this figure:
-
-- Colours are swapped: the image is OpenCV BGR shown as RGB.
-- Some labels are cut off at the image edge.
-
-## Known issues in v0
-
-1. **Not a YOLO detector.** The model predicts one box per image. Every label line after the first is discarded.
-2. **Augmentation corrupts boxes.** Flips, shifts, rotation and zoom are applied to the images, but the box coordinates are not transformed with them. This is a major cause of the low IoU.
-3. **Evaluation leakage.** Train and val were merged and re-split at random, and the "test" split was used for early stopping.
-4. **Class imbalance is not addressed.** Focal loss uses one α for all classes, and no class weighting is applied.
-5. **Low resolution.** Resizing to 128×128 without keeping the aspect ratio makes small barriers and sidewalks hard to see.
-6. **Not reproducible.**
-   - Paths are hard-coded to Google Drive.
-   - There is no `requirements.txt`.
-   - The trained weights are not published.
-   - Training is forced onto the CPU.
-
-## Roadmap
-
-1. ~~**Audit the data.**~~ Done: [`reports/data_audit`](reports/data_audit/report.md).
-2. ~~**Fix the evaluation.**~~ Done: leak-free v1 splits by incident ticket in [`splits/`](splits/summary.md).
-3. ~~**Retrain with a real detector.**~~ Done: YOLO11s, results above. The v0 model cannot be re-evaluated on the new test split because its weights were never saved.
-4. **Next phase:** see [`docs/PLAN_v2.md`](docs/PLAN_v2.md). It covers:
-   - pre-processing of train and val (quality filter, near-duplicates, label review);
-   - ~~measuring the random-split inflation~~ (done: about 2.4 mAP50 points, see the [Track A report](reports/trackA/report.md));
-   - an external pothole benchmark, the paper's one like-for-like number;
-   - higher resolution and longer training;
-   - released weights and a demo.
-
-## Contributions
-
-Issues and pull requests are welcome.
+**v0** was a small custom CNN that predicted one box per image. Its evaluation leaked, and it reached an accuracy of 0.720 and a mean IoU of 0.166. Its corrected results and known issues are in [`docs/v0.md`](docs/v0.md).
 
 ## License
 
-Code: [MIT](LICENSE). The images and labels follow the license of the original dataset (AlElaiwi et al., 2022).
+- **Code:** [MIT](LICENSE).
+- **Images and labels:** they follow the original dataset's licence.
+- **Model weights:** trained with Ultralytics, so they are subject to its AGPL-3.0 licence.
