@@ -36,7 +36,30 @@ The dataset paper (AlElaiwi et al., 2022) re-tested its model on the Roboflow "P
    | External set | 3.75 | 0.9% |
 
    External potholes are about 5× smaller and 3× denser. The images are also small (640×352 or 416×416). A model trained mostly on large, single potholes misses many small ones, which matches the low recall (0.49).
-4. **Implication for the plan:** higher input resolution and small-object handling (plan v2, step 5) should help here as well as on barriers.
+4. **Implication for the plan:** we expected higher input resolution and small-object handling to help here. The follow-up below tested this, and they did not.
+
+## Follow-up: can resolution or slicing close the gap?
+
+The domain-shift finding suggested that small potholes are the problem, so we tried the cheap fixes first, all **without training**: larger inference sizes, sliced inference (SAHI, [`src/predict_sahi.py`](../../src/predict_sahi.py)), and the two resolution-screening models (half the training data, 40 epochs, see the [screening report](../resolution_screen/report.md)). All rows are on the same 1,482 images. The differences are paired against v1 at 640 px, with 95% CIs by image.
+
+| Model | Inference | P | R | F1 | mAP50 | mAP50-95 | Δ mAP50 vs v1 |
+|---|---|---|---|---|---|---|---|
+| **v1** (full data, 50 epochs) | 640 px | 0.631 | 0.487 | 0.550 | **0.551** | **0.271** | — |
+| v1 | 960 px | 0.565 | 0.488 | 0.523 | 0.518 | 0.240 | −0.034 [−0.044, −0.024] |
+| v1 | 1280 px | 0.543 | 0.421 | 0.474 | 0.439 | 0.189 | −0.112 [−0.125, −0.099] |
+| v1 | SAHI, 320 px slices | 0.569 | 0.466 | 0.512 | 0.496 | 0.235 | −0.055 [−0.066, −0.045] |
+| v1 | SAHI, 256 px slices | 0.520 | 0.431 | 0.471 | 0.444 | 0.206 | −0.107 [−0.119, −0.095] |
+| Screening model, trained at 640 | 640 px | 0.582 | 0.434 | 0.497 | 0.476 | 0.228 | — |
+| Screening model, trained at 960 | 960 px | 0.598 | 0.421 | 0.494 | 0.481 | 0.239 | — |
+
+Paired, trained at 960 minus trained at 640: mAP50 +0.005 [−0.006, +0.015], mAP50-95 +0.011 [+0.006, +0.017].
+
+**Findings**
+
+1. **Nothing cheap closes the gap.** Every inference-time change made v1 worse. Training at 960 px adds about one mAP50-95 point here, the same small pothole-only gain seen on our own val.
+2. **Upscaling hurts.** The external images are only 640×352 or 416×416, so larger inference sizes and small slices just enlarge blurry pixels. The model then sees potholes at scales it never saw in training.
+3. **More training data helped far more than resolution.** The screening models (half the data, 40 epochs) score about 7 mAP50 points below v1 (full data, 50 epochs). Both data and epochs changed, so we cannot split the two effects.
+4. **So the gap is mostly a difference in what counts as a pothole**, not a resolution problem. The external labels mark many small, dense potholes, and the paper may also have fine-tuned on this set (it does not say). Matching the paper here would need fine-tuning on some external images, which would no longer be a zero-shot test.
 
 ## Limits
 
